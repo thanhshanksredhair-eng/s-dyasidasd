@@ -33,7 +33,7 @@ if type(ENV[SESSION_KEY]) == "table" and ENV[SESSION_KEY].Stop then
     pcall(ENV[SESSION_KEY].Stop)
 end
 
-local Session = { Active = true, AutoPlay = false, Connections = {}, Threads = {} }
+local Session = { Active = true, AutoPlay = false, StartGame = false, ExecuteAt = os.clock(), Connections = {}, Threads = {} }
 ENV[SESSION_KEY] = Session
 
 local function trackConnection(connection)
@@ -52,6 +52,7 @@ local function stopSession()
     if not Session.Active then return end
     Session.Active = false
     Session.AutoPlay = false
+    Session.StartGame = false
     disconnectAll()
     if ENV[SESSION_KEY] == Session then ENV[SESSION_KEY] = nil end
 end
@@ -151,13 +152,43 @@ local function headerButton(text, x, callback)
     button.MouseButton1Click:Connect(callback)
     return button
 end
-headerButton("—", -116, function() Main.Visible = false end)
+local minimized = false
+local normalSize = UDim2.fromOffset(780, 520)
+local compactSize = UDim2.fromOffset(650, 440)
+
+local RestoreChip = create("TextButton", {
+    Name = "RestoreChip", AnchorPoint = Vector2.new(0, 1),
+    Position = UDim2.new(0, 18, 1, -18), Size = UDim2.fromOffset(150, 42),
+    BackgroundColor3 = COLORS.Panel, BackgroundTransparency = 0.05,
+    BorderSizePixel = 0, Text = "LotusHub  +",
+    Font = Enum.Font.GothamSemibold, TextSize = 14,
+    TextColor3 = COLORS.White, Visible = false, AutoButtonColor = true,
+}, Screen)
+corner(RestoreChip, 12)
+stroke(RestoreChip, COLORS.Silver, 0.25, 1)
+
+local function restoreWindow()
+    minimized = false
+    Main.Visible = true
+    Main.Size = normalSize
+    RestoreChip.Visible = false
+    updateScale()
+end
+RestoreChip.MouseButton1Click:Connect(restoreWindow)
+
+headerButton("—", -116, function()
+    minimized = true
+    Main.Visible = false
+    RestoreChip.Visible = true
+end)
 headerButton("□", -72, function()
-    Main.Size = Main.Size == UDim2.fromOffset(780, 520)
-        and UDim2.fromOffset(900, 590) or UDim2.fromOffset(780, 520)
+    Main.Size = Main.Size == normalSize and compactSize or normalSize
     updateScale()
 end)
-headerButton("×", -34, function() stopSession(); Screen:Destroy() end)
+headerButton("×", -34, function()
+    stopSession()
+    Screen:Destroy()
+end)
 
 -- Drag window from header.
 do
@@ -194,12 +225,12 @@ local NavList = create("Frame", { Position = UDim2.fromOffset(12, 18), Size = UD
 create("UIListLayout", { Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder }, NavList)
 
 local pages = {
-    { name = "Gameplay", subtitle = "Các chức năng cơ bản và quan trọng nhất" },
-    { name = "Sung Jin Woo Vanguard", subtitle = "Các nhiệm vụ và tính năng Sung Jin Woo" },
-    { name = "True Shadow Monarch", subtitle = "Tự động hóa nhiệm vụ True Shadow Monarch" },
-    { name = "System And Shadow", subtitle = "Các tính năng System và Shadow" },
-    { name = "Summon", subtitle = "Các tính năng triệu hồi (DLC)" },
-    { name = "Adventure Odyssey", subtitle = "Các tính năng Adventure Odyssey (DLC)" },
+    { name = "\1" },
+    { name = "\1" },
+    { name = "\1" },
+    { name = "\1" },
+    { name = "\1" },
+    { name = "\1" },
 }
 
 local pageFrames, navButtons = {}, {}
@@ -245,58 +276,41 @@ for index, page in ipairs(pages) do
         Text = page.name, Font = Enum.Font.GothamBold, TextSize = 27,
         TextColor3 = COLORS.White, TextXAlignment = Enum.TextXAlignment.Left,
     }, pageFrame)
-    create("TextLabel", {
-        Size = UDim2.new(1, -4, 0, 24), BackgroundTransparency = 1,
-        Text = page.subtitle, Font = Enum.Font.Gotham, TextSize = 13,
-        TextColor3 = COLORS.Muted, TextXAlignment = Enum.TextXAlignment.Left,
-    }, pageFrame)
     create("Frame", { Size = UDim2.new(1, -4, 0, 1), BackgroundColor3 = COLORS.Stroke, BackgroundTransparency = 0.45, BorderSizePixel = 0 }, pageFrame)
 end
 
-local function addInfo(pageName, title, description, status)
+local function addInfo(pageName, title, status)
     local parent = pageFrames[pageName]
     local row = create("Frame", {
-        Size = UDim2.new(1, -4, 0, 76), BackgroundColor3 = COLORS.Panel2,
+        Size = UDim2.new(1, -4, 0, 62), BackgroundColor3 = COLORS.Panel2,
         BackgroundTransparency = 0.13, BorderSizePixel = 0,
     }, parent)
     corner(row, 12); stroke(row, COLORS.Stroke, 0.62, 1)
     create("TextLabel", {
-        Position = UDim2.fromOffset(18, 12), Size = UDim2.new(1, -155, 0, 23),
+        Position = UDim2.fromOffset(18, 0), Size = UDim2.new(1, -155, 1, 0),
         BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamSemibold,
         TextSize = 15, TextColor3 = COLORS.White, TextXAlignment = Enum.TextXAlignment.Left,
-    }, row)
-    create("TextLabel", {
-        Position = UDim2.fromOffset(18, 38), Size = UDim2.new(1, -155, 0, 25),
-        BackgroundTransparency = 1, Text = description, Font = Enum.Font.Gotham,
-        TextSize = 12, TextColor3 = COLORS.Muted, TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
     }, row)
     create("TextLabel", {
         AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -17, 0.5, 0),
         Size = UDim2.fromOffset(115, 28), BackgroundTransparency = 1,
         Text = status, Font = Enum.Font.GothamMedium, TextSize = 11,
         TextColor3 = COLORS.Muted, TextXAlignment = Enum.TextXAlignment.Right,
-        TextWrapped = true,
     }, row)
     return row
 end
 
-local function addToggle(pageName, title, description, initial, callback)
+local function addToggle(pageName, title, initial, callback)
     local parent = pageFrames[pageName]
     local row = create("Frame", {
-        Size = UDim2.new(1, -4, 0, 82), BackgroundColor3 = COLORS.Panel2,
+        Size = UDim2.new(1, -4, 0, 66), BackgroundColor3 = COLORS.Panel2,
         BackgroundTransparency = 0.13, BorderSizePixel = 0,
     }, parent)
     corner(row, 12); stroke(row, COLORS.Stroke, 0.62, 1)
     create("TextLabel", {
-        Position = UDim2.fromOffset(18, 13), Size = UDim2.new(1, -110, 0, 24),
+        Position = UDim2.fromOffset(18, 0), Size = UDim2.new(1, -110, 1, 0),
         BackgroundTransparency = 1, Text = title, Font = Enum.Font.GothamSemibold,
         TextSize = 15, TextColor3 = COLORS.White, TextXAlignment = Enum.TextXAlignment.Left,
-    }, row)
-    create("TextLabel", {
-        Position = UDim2.fromOffset(18, 42), Size = UDim2.new(1, -110, 0, 22),
-        BackgroundTransparency = 1, Text = description, Font = Enum.Font.Gotham,
-        TextSize = 12, TextColor3 = COLORS.Muted, TextXAlignment = Enum.TextXAlignment.Left,
     }, row)
     local toggle = create("TextButton", {
         AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -18, 0.5, 0),
@@ -336,8 +350,44 @@ local function addToggle(pageName, title, description, initial, callback)
     }
 end
 
--- Gameplay: AutoPlay is wired to the captured RemoteEvent and observed GUI text.
-addInfo("Gameplay", "Auto StartGame", "Thiếu path nút Start và tín hiệu xác định Stage đáng tin cậy", "MISSING")
+-- Gameplay: StartGame uses the captured remote after a fixed 10-second delay.
+local startGameRemote = ReplicatedStorage:FindFirstChild("AV_GAME_WAVES_V1_BLINK_RELIABLE_REMOTE")
+local startGameAvailable = startGameRemote ~= nil
+    and startGameRemote:IsA("RemoteEvent")
+    and type(buffer) == "table"
+    and type(buffer.fromstring) == "function"
+
+local startGameToggle
+local function runStartGameLoop()
+    task.spawn(function()
+        while Session.Active and Session.StartGame and os.clock() - Session.ExecuteAt < 10 do
+            task.wait(0.1)
+        end
+        if not (Session.Active and Session.StartGame) then return end
+
+        while Session.Active and Session.StartGame do
+            local ok, err = pcall(function()
+                startGameRemote:FireServer(buffer.fromstring("\\002"))
+            end)
+            if not ok then warn("[LotusHub] StartGame remote error: " .. tostring(err)) end
+            task.wait(1)
+        end
+    end)
+end
+
+startGameToggle = addToggle("Gameplay", "Auto StartGame", false, function(enabled)
+    Session.StartGame = enabled
+    if enabled then
+        if not startGameAvailable then
+            warn("[LotusHub] StartGame RemoteEvent or buffer API unavailable.")
+            Session.StartGame = false
+            startGameToggle.Set(false)
+            return
+        end
+        runStartGameLoop()
+    end
+end)
+
 local autoPlayRemote = ReplicatedStorage:FindFirstChild("AV_GAME_AUTOPLAY_V1_BLINK_RELIABLE_REMOTE")
 local autoPlayAvailable = autoPlayRemote ~= nil and autoPlayRemote:IsA("RemoteEvent") and type(buffer) == "table" and type(buffer.fromstring) == "function"
 
@@ -376,7 +426,7 @@ local function runAutoPlayMonitor()
     end)
 end
 
-autoPlayToggle = addToggle("Gameplay", "Auto Active AutoPlay", "Theo dõi Auto Play / Auto Playing; chỉ gửi khi trạng thái OFF", false, function(enabled)
+autoPlayToggle = addToggle("Gameplay", "Auto Active AutoPlay", false, function(enabled)
     Session.AutoPlay = enabled
     if enabled then
         if not autoPlayAvailable then
@@ -388,43 +438,43 @@ autoPlayToggle = addToggle("Gameplay", "Auto Active AutoPlay", "Theo dõi Auto P
         runAutoPlayMonitor()
     end
 end)
-addInfo("Gameplay", "Auto Replay", "Chưa có capture Replay/Next và điều kiện kết thúc trận", "MISSING")
-addInfo("Gameplay", "Auto Press Teleport to Lobby", "Chưa có path nút hoặc RemoteEvent Teleport đã xác minh", "MISSING")
+addInfo("Gameplay", "Auto Replay", "MISSING")
+addInfo("Gameplay", "Auto Press Teleport to Lobby", "MISSING")
 
 -- Other categories: show requested modules without pretending they are implemented.
 local moduleRows = {
     ["Sung Jin Woo Vanguard"] = {
-        {"Auto Get Igris", "Legend Stage → Double Dungeon → Act 1; logic điều hướng chưa tích hợp"},
-        {"Auto Beru Quest", "Cần xác minh state quest và thao tác dungeon"},
-        {"Auto Sung Jin Woo Arise", "Cần xác minh equip, modifier và restart"},
-        {"Auto Evolve / Unlock / Sacrifice Igris", "Thao tác inventory; cần xác minh target và điều kiện an toàn"},
-        {"Auto Evolve Sung Jin Woo", "Cần xác minh state và thao tác inventory"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
     },
     ["True Shadow Monarch"] = {
-        {"Auto TSJW Quest", "Cần xác minh quest state và nút Go"},
-        {"Auto Consume Item", "Thao tác tiêu hao; chưa có state/điều kiện xác minh"},
-        {"Auto Get Secret Quest", "Cần capture GUI/state quest"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
     },
     ["System And Shadow"] = {
-        {"Auto 100 Level System", "Chưa có capture state và thao tác"},
-        {"Auto Shadows Trial", "Mục tiêu 7 Shadows; chưa có logic đã xác minh"},
-        {"Auto Returned Dungeon", "Mục tiêu 3 Shadows; chưa có logic đã xác minh"},
-        {"Auto First Commander", "Mục tiêu 2 Shadows; chưa có logic đã xác minh"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
     },
     ["Summon"] = {
-        {"Auto Warfront", "DLC · Chưa tích hợp"},
-        {"Auto Summon Cake", "DLC · Chưa tích hợp"},
-        {"Auto Summon Iced Tea", "DLC · Chưa tích hợp"},
-        {"Auto Summon Gems", "DLC · Chưa tích hợp"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
+        {"\1"},
     },
     ["Adventure Odyssey"] = {
-        {"Auto Until Flight Card", "DLC · Chưa tích hợp"},
-        {"Auto 8 Hours Adventure", "DLC · Chưa tích hợp"},
+        {"\1"},
+        {"\1"},
     },
 }
 
 for pageName, rows in pairs(moduleRows) do
-    for _, item in ipairs(rows) do addInfo(pageName, item[1], item[2], "UNTESTED") end
+    for _, item in ipairs(rows) do addInfo(pageName, item[1], "UNTESTED") end
 end
 
 setPage("Gameplay")
@@ -434,4 +484,4 @@ if workspace.CurrentCamera then
     trackConnection(workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale))
 end
 
-print("[LotusHub] UI loaded. Auto Active AutoPlay is available only when its captured RemoteEvent is present.")
+print("[LotusHub] UI loaded. StartGame waits 10 seconds, then fires every 1 second while enabled.")
